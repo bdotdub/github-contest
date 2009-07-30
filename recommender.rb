@@ -23,6 +23,12 @@ test_users.each do |user|
   end
 
   repos     = user_repos[user]
+
+  if repos.nil?
+    recommendations[user] = popular_repos[0, 10]
+    next
+  end
+
   num_repos = repos.length
   matches   = []
   mrepos     = {}
