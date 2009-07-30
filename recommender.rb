@@ -16,6 +16,8 @@ trap 'SIGINT' do
   exit
 end
 
+t1 = t2 = Time.now
+
 test_users.each do |user|
   if recommendations.key?(user)
     puts "already finished for user #{user}"
@@ -68,6 +70,13 @@ test_users.each do |user|
   
   pp top_repos
   recommendations[user] = top_repos
+
+  t2 = Time.now
+  if (t2 - t1) > 300
+    puts "its been #{t2 - t1} seconds... saving!"
+    IntermediateResult.save(t2.tv_sec)
+    t1 = t2
+  end
 end
 
 File.open('results.txt', 'w+') do |f|

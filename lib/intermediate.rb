@@ -20,6 +20,12 @@ class IntermediateResult
       f.write(@@results.to_yaml)
     end
   end
+
+  def self.save(time)
+    File.open("output/intermediate.#{time}.txt", "w+") do |f|
+      f.write(@@results.to_yaml)
+    end
+  end
 end
 
 IntermediateResult.setup
