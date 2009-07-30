@@ -3,13 +3,25 @@ $:.unshift 'lib'
 require 'file'
 require 'user_repos'
 require 'match'
+require 'intermediate'
 require 'pp'
 
-recommendations = {}
+recommendations = IntermediateResult.results
 user_repos, repo_users, popular_repos = parse_user_repos('input/data.txt')
 test_users = File.lines_for_file('input/test.txt')
 
+trap 'SIGINT' do
+  puts "saving intermediate results"
+  IntermediateResult.save!
+  exit
+end
+
 test_users.each do |user|
+  if recommendations.key?(user)
+    puts "already finished for user #{user}"
+    next
+  end
+
   repos     = user_repos[user]
   num_repos = repos.length
   matches   = []
