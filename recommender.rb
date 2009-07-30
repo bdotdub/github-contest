@@ -1,87 +1,41 @@
-$:.unshift 'lib'
+require 'models'
 
-require 'file'
-require 'user_repos'
-require 'match'
-require 'intermediate'
-require 'pp'
+start_index = ARGV[0].to_i || 0
+end_index   = ARGV[1].to_i || 4787
+flip        = false
 
-recommendations = IntermediateResult.results
-user_repos, repo_users, popular_repos = parse_user_repos('input/data.txt')
-test_users = File.lines_for_file('input/test.txt')
-
-trap 'SIGINT' do
-  puts "saving intermediate results"
-  IntermediateResult.save!
-  exit
+if end_index < start_index
+  swap = end_index
+  end_index = start_index
+  start_index = swap
+  flip = true
 end
 
-t1 = t2 = Time.now
+user_ids = []
 
-test_users.each do |user|
-  if recommendations.key?(user)
-    puts "already finished for user #{user}"
-    next
-  end
-
-  repos     = user_repos[user]
-
-  if repos.nil?
-    recommendations[user] = popular_repos[0, 10]
-    next
-  end
-
-  num_repos = repos.length
-  matches   = []
-  mrepos     = {}
-
-  puts "on user #{user} with #{repos.length} repos"
-
-  repos.each do |repo|
-    other_users = repo_users[repo]
-    other_users.each do |other_user|
-      next if user == other_user
-      num_other_user_repos = user_repos[other_user].length
-
-      intersection = repos & user_repos[other_user]
-      intersection_length = intersection.length
-
-      match = Match.new
-      match.uid = user
-      match.muid = other_user
-      match.percentage = intersection_length / num_repos.to_f
-      match.mpercentage = intersection_length /  num_other_user_repos.to_f
-      match.mrepo_ids = user_repos[other_user] - repos
-
-      match.mrepo_ids.each do |mrepo|
-        mrepos[mrepo] ||= 0
-        mrepos[mrepo] += match.percentage + match.mpercentage
-      end
-
-      matches.push(match)
-    end
-  end
-
-  top_repos = mrepos.sort{ |a,b| b[1] <=> a[1] }[0,10].map{ |a| a[0] }
-
-  if top_repos.length < 10
-    top_repos.concat(popular_repos[top_repos.length..10])
-  end
-  
-  pp top_repos
-  recommendations[user] = top_repos
-
-  t2 = Time.now
-  if (t2 - t1) > 300
-    puts "its been #{t2 - t1} seconds... saving!"
-    IntermediateResult.save(t2.tv_sec)
-    t1 = t2
-  end
+def time_def(message)
+  print "Running: #{message} ... "
+  $stdout.flush
+  start = Time.now
+  yield
+  puts "Took #{Time.now - start} seconds"
 end
 
-File.open('results.txt', 'w+') do |f|
-  recommendations.each do |uid, ids|
-    f.puts "#{uid}:#{ids.join(',')}"
+time_def('Load repos')  { Repo.load('input/repos.txt', 'input/lang.txt') }
+time_def('Load user')   { User.load('input/data.txt') }
+
+File.open('input/test.txt', 'r').each do |user_id|
+  user_ids << user_id.chomp
+end
+
+File.open("results.#{start_index}.#{end_index}.txt", 'w') do |f|
+  user_ids_to_run = user_ids[start_index..end_index]
+  user_ids_to_run.reverse! if flip
+
+  user_ids_to_run.each do |user_id|
+    user = User.find(user_id) || User.new(user_id)
+    f << "#{user.id}:#{user.recommendations.join(',')}\n"
+    f.flush
   end
 end
 
