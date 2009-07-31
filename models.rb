@@ -11,23 +11,8 @@ class Repo
       user_name, created_at, fork_id = the_rest.split(',')
       user, name = user_name.split('/')
 
-      repo = Repo.new(id, user, name, created_at, fork_id)
+      repo = Repo.find(id) || Repo.new(id, user, name, created_at, fork_id)
       @@repos[id] = repo
-    end
-
-    if not language_file.nil?
-      File.open(language_file, 'r').each do |line|
-        id, the_rest = line.chomp.split(':')
-        language_pairs = line.split(',')
-
-        language_pairs.each do |pair|
-          language, lines = pair.split(';')
-          repo = Repo.find(id)
-          if not repo.nil?
-            repo.languages[language] = lines
-          end
-        end
-      end
     end
   end
 
@@ -113,6 +98,7 @@ class User
     @repos.each do |repo|
       repo.users.each do |user|
         # next if seen_user_ids.key?(user)
+        next if user.id == @id
 
         their_repo_ids = user.repos.map{|r| r.id }
         their_num_repos = their_repo_ids.length
@@ -127,7 +113,7 @@ class User
         their_percentage = intersection_size / their_num_repos.to_f
 
         # Give points to recommendation
-        sum_percentage = my_percentage + their_num_repos
+        sum_percentage = my_percentage + their_percentage
         difference.each do |diff|
           recs[diff] ||= 0
           recs[diff] += sum_percentage
