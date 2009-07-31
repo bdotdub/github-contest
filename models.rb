@@ -112,7 +112,7 @@ class User
 
     @repos.each do |repo|
       repo.users.each do |user|
-        next if seen_user_ids.key?(user)
+        # next if seen_user_ids.key?(user)
 
         their_repo_ids = user.repos.map{|r| r.id }
         their_num_repos = their_repo_ids.length
